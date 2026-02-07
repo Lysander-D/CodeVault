@@ -13,7 +13,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Design Config -->
+    <!-- Tailwind Configuration -->
     <script>
         tailwind.config = {
             theme: {
@@ -36,6 +36,7 @@
                     boxShadow: {
                         'ios': '0 4px 12px rgba(0, 0, 0, 0.04)',
                         'ios-active': '0 2px 8px rgba(0, 0, 0, 0.04)',
+                        'float': '0 8px 30px rgba(0,0,0,0.12)'
                     }
                 }
             }
@@ -47,10 +48,12 @@
         html { -webkit-tap-highlight-color: transparent; }
         body { 
             background-color: #F2F2F7; 
-            overscroll-behavior-y: none; /* Prevent bounce effect on body */
+            overscroll-behavior-y: none;
+            -webkit-font-smoothing: antialiased;
+            user-select: none; /* Prevent text selection during long press */
         }
         
-        /* Hide Scrollbar but keep functionality */
+        /* Hide Scrollbar */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -66,7 +69,7 @@
         .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .animate-scale-in { animation: scaleIn 0.2s ease-out forwards; }
         
-        /* Glassmorphism Utilities */
+        /* Glassmorphism */
         .glass {
             background-color: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
@@ -90,174 +93,240 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-        // --- ICONS (SVG Components to avoid external dependency lag) ---
-        const IconCopy = ({ size = 20, className }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        );
+        // --- ICONS ---
         const IconCheck = ({ size = 20, className }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12"></polyline></svg>
         );
         const IconTrash = ({ size = 20, className }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path></svg>
         );
-        const IconSettings = ({ size = 20, className }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-        );
         const IconPlus = ({ size = 20, className }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        );
+        const IconDownload = ({ size = 20, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         );
         const IconInbox = ({ size = 20, className }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
         );
+        const IconMenu = ({ size = 20, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        );
+
+        // --- CONSTANTS ---
+        const MASTER_STORAGE_KEY = 'CV_MASTER_DB_V1';
+        const CATS_STORAGE_KEY = 'CV_CATS_V1';
+        const LEGACY_KEYS = ['codevault_v6_final', 'CV_DATA_FINAL', 'CV_DATA_V9', 'codevault_data', 'cv_data'];
+        const DEFAULT_CATS = ['Apple', 'Android', 'General', 'Promo'];
 
         // --- UTILS ---
         const generateId = () => Math.random().toString(36).substring(2, 9);
         
         // --- CUSTOM HOOKS ---
-
-        // Hook for Infinite Scroll (Virtualization Lite)
         const useInfiniteScroll = (items, itemsPerPage = 50) => {
             const [displayCount, setDisplayCount] = useState(itemsPerPage);
-            
-            // Reset when items array changes significantly (e.g. tab switch)
-            useEffect(() => {
-                setDisplayCount(itemsPerPage);
-            }, [items.length, items[0]?.category]);
-
-            const loadMore = useCallback(() => {
-                setDisplayCount(prev => Math.min(prev + itemsPerPage, items.length));
-            }, [items.length, itemsPerPage]);
-
+            useEffect(() => { setDisplayCount(itemsPerPage); }, [items.length, items[0]?.category]);
+            const loadMore = useCallback(() => { setDisplayCount(prev => Math.min(prev + itemsPerPage, items.length)); }, [items.length, itemsPerPage]);
             const visibleItems = useMemo(() => items.slice(0, displayCount), [items, displayCount]);
             const hasMore = displayCount < items.length;
-
             return { visibleItems, loadMore, hasMore };
         };
 
         // --- COMPONENTS ---
 
-        // 1. Toast Notification
         const Toast = ({ message, isVisible, onClose }) => {
             useEffect(() => {
                 if (isVisible) {
-                    const timer = setTimeout(onClose, 2000);
+                    const timer = setTimeout(onClose, 2500);
                     return () => clearTimeout(timer);
                 }
             }, [isVisible, onClose]);
-
             if (!isVisible) return null;
-
             return (
-                <div className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-4 animate-scale-in">
-                    <div className="bg-ios-card/90 backdrop-blur-md shadow-ios-active border border-black/5 text-slate-800 px-5 py-3 rounded-full flex items-center gap-3">
-                        <div className="bg-ios-green text-white rounded-full p-1">
-                            <IconCheck size={12} />
-                        </div>
+                <div className="fixed top-6 left-0 right-0 z-[60] flex justify-center pointer-events-none px-4 animate-scale-in">
+                    <div className="bg-ios-card/90 backdrop-blur-md shadow-float border border-black/5 text-slate-900 px-5 py-3 rounded-full flex items-center gap-3">
+                        <div className="bg-ios-green text-white rounded-full p-1"><IconCheck size={12} /></div>
                         <span className="text-sm font-semibold tracking-tight">{message}</span>
                     </div>
                 </div>
             );
         };
 
-        // 2. Input Modal
-        const InputArea = ({ isOpen, onClose, onImport, categories, activeCategory }) => {
-            const [text, setText] = useState('');
-            const [category, setCategory] = useState(activeCategory);
+        // --- TAB BUTTON COMPONENT (HANDLES LONG PRESS) ---
+        const TabButton = ({ name, isActive, stat, onClick, onRename }) => {
+            const timerRef = useRef(null);
+            const isLongPress = useRef(false);
 
-            useEffect(() => {
-                if(isOpen) setCategory(activeCategory);
-            }, [isOpen, activeCategory]);
+            const handleStart = () => {
+                isLongPress.current = false;
+                timerRef.current = setTimeout(() => {
+                    isLongPress.current = true;
+                    if (navigator.vibrate) navigator.vibrate(50);
+                    onRename(name);
+                }, 600); // 600ms long press
+            };
 
-            if (!isOpen) return null;
+            const handleEnd = () => {
+                if (timerRef.current) {
+                    clearTimeout(timerRef.current);
+                    timerRef.current = null;
+                }
+            };
 
-            const handleImport = () => {
-                onImport(text, category);
-                setText('');
-                onClose();
+            const handleClick = (e) => {
+                if (isLongPress.current) return; // Ignore click if long press triggered
+                onClick(name);
             };
 
             return (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-ios-bg w-full max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl h-[90vh] sm:h-auto flex flex-col animate-slide-up">
-                        {/* Header */}
-                        <div className="flex justify-between items-center p-4 border-b border-ios-separator/50 bg-ios-card rounded-t-2xl">
-                            <button onClick={onClose} className="text-ios-blue font-medium text-base active:opacity-50 transition-opacity">Cancel</button>
-                            <h3 className="font-semibold text-slate-900">Import Codes</h3>
-                            <button 
-                                onClick={handleImport} 
-                                disabled={!text.trim()}
-                                className={`font-bold text-base transition-opacity ${text.trim() ? 'text-ios-blue active:opacity-50' : 'text-ios-gray opacity-50'}`}
-                            >
-                                Done
-                            </button>
-                        </div>
+                <button 
+                    onMouseDown={handleStart}
+                    onMouseUp={handleEnd}
+                    onMouseLeave={handleEnd}
+                    onTouchStart={handleStart}
+                    onTouchEnd={handleEnd}
+                    onClick={handleClick}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className={`relative pb-2 text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 select-none ${isActive ? 'text-ios-blue' : 'text-ios-gray'}`}
+                >
+                    {name} 
+                    <span className="text-[10px] bg-black/5 px-1.5 rounded-md text-slate-500 font-semibold">{stat.unused}</span>
+                    {isActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-ios-blue rounded-full" />}
+                </button>
+            );
+        };
 
+        const InputModal = ({ isOpen, onClose, onImport, categories, activeCategory }) => {
+            const [text, setText] = useState('');
+            const [category, setCategory] = useState(activeCategory);
+            useEffect(() => { if(isOpen) setCategory(activeCategory); }, [isOpen, activeCategory]);
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-ios-bg w-full max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl h-[92vh] sm:h-auto flex flex-col animate-slide-up">
+                        <div className="flex justify-between items-center p-4 border-b border-ios-separator/50 bg-ios-card rounded-t-2xl">
+                            <button onClick={onClose} className="text-ios-blue font-medium text-base active:opacity-50">Cancel</button>
+                            <h3 className="font-semibold text-slate-900">Import Codes</h3>
+                            <button onClick={() => { onImport(text, category); setText(''); onClose(); }} disabled={!text.trim()} className={`font-bold text-base transition-opacity ${text.trim() ? 'text-ios-blue active:opacity-50' : 'text-ios-gray opacity-50'}`}>Done</button>
+                        </div>
                         <div className="p-4 flex-1 overflow-y-auto">
-                            {/* Category Selector */}
                             <label className="text-xs font-semibold text-ios-gray uppercase ml-1 mb-2 block">Category</label>
                             <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 pb-2">
                                 {categories.map(cat => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => setCategory(cat)}
-                                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 border ${
-                                            category === cat 
-                                            ? 'bg-ios-blue text-white border-transparent shadow-ios' 
-                                            : 'bg-white text-slate-600 border-black/5'
-                                        }`}
-                                    >
-                                        {cat}
-                                    </button>
+                                    <button key={cat} onClick={() => setCategory(cat)} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 border ${category === cat ? 'bg-ios-blue text-white border-transparent shadow-ios' : 'bg-white text-slate-600 border-black/5'}`}>{cat}</button>
                                 ))}
                             </div>
-
-                            {/* Text Area */}
-                            <label className="text-xs font-semibold text-ios-gray uppercase ml-1 mb-2 block">Raw Text</label>
+                            <label className="text-xs font-semibold text-ios-gray uppercase ml-1 mb-2 block">Paste Text</label>
                             <div className="bg-white rounded-xl shadow-sm border border-black/5 overflow-hidden">
-                                <textarea
-                                    className="w-full h-64 p-4 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-300"
-                                    placeholder="Paste emails, chat logs, or lists here. We will extract codes automatically..."
-                                    value={text}
-                                    onChange={(e) => setText(e.target.value)}
-                                ></textarea>
+                                <textarea className="w-full h-64 p-4 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-300" placeholder="Paste emails, chats, or lists here..." value={text} onChange={(e) => setText(e.target.value)}></textarea>
                             </div>
-                            <p className="text-xs text-ios-gray mt-3 px-1 text-center">
-                                Detects alphanumeric strings (10-80 chars).
-                            </p>
+                            <p className="text-xs text-ios-gray mt-3 px-1 text-center">Auto-extracts 10-80 char alphanumeric codes.</p>
                         </div>
                     </div>
                 </div>
             );
         };
 
-        // 3. Main App
+        const SettingsMenu = ({ isOpen, onClose, onReset, onBackup }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+                    <div className="bg-ios-card w-72 rounded-2xl shadow-2xl p-4 animate-scale-in" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-bold text-lg mb-4 text-center">Settings</h3>
+                        <div className="space-y-3">
+                            <button onClick={onBackup} className="w-full py-3 bg-slate-100 rounded-xl text-ios-blue font-medium active:scale-95 transition-transform flex items-center justify-center gap-2"><IconDownload size={18} /> Backup Data</button>
+                            <div className="h-px bg-slate-100 my-2"></div>
+                            <button onClick={onReset} className="w-full py-3 bg-red-50 rounded-xl text-ios-red font-medium active:scale-95 transition-transform flex items-center justify-center gap-2"><IconTrash size={18} /> Reset All Data</button>
+                        </div>
+                        <button onClick={onClose} className="w-full mt-4 py-3 text-slate-500 font-medium">Close</button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
         const App = () => {
-            // --- STATE ---
-            const DEFAULT_CATS = ['Apple', 'Android', 'General', 'Promo'];
-            const [codes, setCodes] = useState(() => {
-                try { return JSON.parse(localStorage.getItem('cv_data') || '[]'); } catch { return []; }
-            });
-            const [categories] = useState(DEFAULT_CATS);
+            const [codes, setCodes] = useState([]);
+            const [categories, setCategories] = useState(DEFAULT_CATS);
             const [activeTab, setActiveTab] = useState(DEFAULT_CATS[0]);
             const [isInputOpen, setIsInputOpen] = useState(false);
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
             const [toast, setToast] = useState({ show: false, msg: '' });
+
+            // --- DATA LOADING & MIGRATION ---
+            useEffect(() => {
+                try {
+                    // 1. Load Categories
+                    const storedCats = localStorage.getItem(CATS_STORAGE_KEY);
+                    if (storedCats) {
+                        const parsedCats = JSON.parse(storedCats);
+                        setCategories(parsedCats);
+                        setActiveTab(parsedCats[0] || DEFAULT_CATS[0]);
+                    }
+
+                    // 2. Load Data (Check Master first, then Legacy)
+                    const masterData = localStorage.getItem(MASTER_STORAGE_KEY);
+                    if (masterData) {
+                        setCodes(JSON.parse(masterData));
+                        return;
+                    }
+
+                    // Legacy Migration
+                    let migratedData = [];
+                    for (const key of LEGACY_KEYS) {
+                        const raw = localStorage.getItem(key);
+                        if (raw) {
+                            try {
+                                const parsed = JSON.parse(raw);
+                                if (Array.isArray(parsed) && parsed.length > 0) {
+                                    migratedData = parsed;
+                                    break;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                    if (migratedData.length > 0) {
+                        setCodes(migratedData);
+                        localStorage.setItem(MASTER_STORAGE_KEY, JSON.stringify(migratedData));
+                        setToast({ show: true, msg: 'Data Migrated Successfully' });
+                    }
+                } catch (e) { console.error("Storage Error", e); }
+            }, []);
 
             // --- PERSISTENCE ---
             useEffect(() => {
-                localStorage.setItem('cv_data', JSON.stringify(codes));
+                if (codes.length > 0) localStorage.setItem(MASTER_STORAGE_KEY, JSON.stringify(codes));
             }, [codes]);
 
             // --- ACTIONS ---
             const showToast = (msg) => setToast({ show: true, msg });
 
+            const handleRenameCategory = (oldName) => {
+                const newName = prompt(`Rename "${oldName}" to:`, oldName);
+                if (!newName) return;
+                const trimmed = newName.trim();
+                if (trimmed === "" || trimmed === oldName) return;
+                if (categories.includes(trimmed)) return alert("Category name already exists!");
+
+                // Update Categories
+                const newCats = categories.map(c => c === oldName ? trimmed : c);
+                setCategories(newCats);
+                localStorage.setItem(CATS_STORAGE_KEY, JSON.stringify(newCats));
+
+                // Update Codes
+                const newCodes = codes.map(c => c.category === oldName ? { ...c, category: trimmed } : c);
+                setCodes(newCodes); // This triggers persistence via useEffect
+
+                // Update Active Tab
+                if (activeTab === oldName) setActiveTab(trimmed);
+
+                showToast(`Renamed to ${trimmed}`);
+            };
+
             const handleImport = (rawText, category) => {
-                const regex = /[a-zA-Z0-9]{10,80}/g; // Adjusted regex as per req
+                const regex = /[a-zA-Z0-9]{10,80}/g;
                 const matches = rawText.match(regex);
-                
-                if (!matches) {
-                    showToast('No codes found');
-                    return;
-                }
+                if (!matches) return showToast('No codes found');
 
                 const uniqueMatches = [...new Set(matches)];
                 const existingValues = new Set(codes.map(c => c.value));
@@ -268,232 +337,161 @@
                         value: val,
                         category,
                         isUsed: false,
-                        createdAt: Date.now() + idx // Strict chronological
+                        createdAt: Date.now() + idx
                     }));
 
-                if (newCodes.length === 0) {
-                    showToast('All codes already exist');
-                    return;
-                }
-
+                if (newCodes.length === 0) return showToast('Codes already exist');
                 setCodes(prev => [...prev, ...newCodes]);
                 setActiveTab(category);
-                showToast(`Imported ${newCodes.length} codes`);
+                showToast(`Added ${newCodes.length} codes`);
             };
 
-            // Toggle Used Status
-            const toggleCode = (id, shouldCopy = false) => {
-                setCodes(prev => prev.map(c => {
-                    if (c.id !== id) return c;
-                    return { ...c, isUsed: !c.isUsed };
-                }));
-            };
+            const toggleCode = useCallback((id) => {
+                setCodes(prev => prev.map(c => c.id === id ? { ...c, isUsed: !c.isUsed } : c));
+            }, []);
 
-            const handleCopy = async (code) => {
+            const handleCopy = useCallback(async (code) => {
                 try {
                     await navigator.clipboard.writeText(code.value);
-                    if (!code.isUsed) {
-                        toggleCode(code.id, true);
-                    }
-                    showToast('Copied & Marked Used');
-                } catch (err) {
-                    showToast('Copy Failed');
-                }
-            };
+                    if (!code.isUsed) toggleCode(code.id);
+                    showToast('Copied to Clipboard');
+                } catch (err) { showToast('Copy Failed'); }
+            }, [toggleCode]);
 
-            const clearUsed = () => {
-                if (confirm(`Remove all USED codes from ${activeTab}?`)) {
-                    // Optimized: Single pass filter
+            const clearUsedInTab = () => {
+                const count = codes.filter(c => c.category === activeTab && c.isUsed).length;
+                if (count === 0) return showToast('No used codes to clear');
+                if (window.confirm(`Are you sure you want to delete ${count} USED codes from ${activeTab}?`)) {
                     setCodes(prev => prev.filter(c => !(c.category === activeTab && c.isUsed)));
-                    showToast('Cleaned up');
+                    showToast(`Cleared ${count} codes`);
                 }
             };
 
             const resetAll = () => {
-                if (confirm('Factory Reset: Delete ALL codes?')) {
+                if (window.confirm('DANGER: This will delete ALL data permanently. Are you sure?')) {
                     setCodes([]);
-                    localStorage.removeItem('cv_data');
+                    setCategories(DEFAULT_CATS);
+                    localStorage.removeItem(MASTER_STORAGE_KEY);
+                    localStorage.removeItem(CATS_STORAGE_KEY);
+                    setIsSettingsOpen(false);
+                    showToast('All Data Reset');
                     window.location.reload();
                 }
             };
 
-            // --- DATA PROCESSING (MEMOIZED) ---
-            const currentTabCodes = useMemo(() => {
-                return codes.filter(c => c.category === activeTab);
-            }, [codes, activeTab]);
+            const backupData = async () => {
+                try {
+                    const data = JSON.stringify({ codes, categories }, null, 2);
+                    await navigator.clipboard.writeText(data);
+                    showToast('Backup JSON copied');
+                    setIsSettingsOpen(false);
+                } catch (e) { showToast('Backup failed'); }
+            };
 
-            // Stats for tabs
+            // --- DATA ---
             const tabStats = useMemo(() => {
                 const stats = {};
                 categories.forEach(cat => {
                     const subset = codes.filter(c => c.category === cat);
-                    stats[cat] = {
-                        total: subset.length,
-                        unused: subset.filter(c => !c.isUsed).length
-                    };
+                    stats[cat] = { total: subset.length, unused: subset.filter(c => !c.isUsed).length };
                 });
                 return stats;
             }, [codes, categories]);
 
-            // Sorting: 1. Unused First, 2. Creation Time (Ascending for FIFO or Descending for LIFO?)
-            // Requirement: "Newest imported codes at the bottom" -> Ascending Creation Time.
-            // Requirement: "Unused codes appear before Used codes".
             const sortedCodes = useMemo(() => {
-                return [...currentTabCodes].sort((a, b) => {
-                    if (a.isUsed === b.isUsed) {
-                        return a.createdAt - b.createdAt; // Chronological
-                    }
-                    return a.isUsed ? 1 : -1; // Unused (false) comes before Used (true)
-                });
-            }, [currentTabCodes]);
+                return codes
+                    .filter(c => c.category === activeTab)
+                    .sort((a, b) => {
+                        if (a.isUsed !== b.isUsed) return a.isUsed ? 1 : -1;
+                        return a.createdAt - b.createdAt; 
+                    });
+            }, [codes, activeTab]);
 
-            // --- VIRTUALIZATION / INFINITE SCROLL ---
-            // Render only first 50, then load more. Solves mobile lag.
             const { visibleItems, loadMore, hasMore } = useInfiniteScroll(sortedCodes, 50);
 
-            // Intersection Observer for "Load More" trigger
+            // Sentinel
             const loaderRef = useRef(null);
             useEffect(() => {
                 const observer = new IntersectionObserver((entries) => {
-                    if (entries[0].isIntersecting && hasMore) {
-                        loadMore();
-                    }
+                    if (entries[0].isIntersecting && hasMore) loadMore();
                 }, { threshold: 0.5 });
-                
                 if (loaderRef.current) observer.observe(loaderRef.current);
                 return () => observer.disconnect();
             }, [hasMore, loadMore]);
 
-            // --- RENDER ---
             return (
                 <div className="min-h-screen pb-[env(safe-area-inset-bottom)]">
-                    {/* 1. Header (Sticky Glass) */}
+                    {/* Header */}
                     <header className="fixed top-0 inset-x-0 z-40 glass border-b border-black/5 pt-[env(safe-area-inset-top)]">
                         <div className="h-14 px-4 flex items-center justify-between max-w-2xl mx-auto">
                             <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-md">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                                    <span className="font-mono font-bold text-xs">CV</span>
                                 </div>
                                 CodeVault
                             </h1>
-                            <button 
-                                onClick={() => setIsInputOpen(true)}
-                                className="w-8 h-8 bg-ios-bg rounded-full flex items-center justify-center text-ios-blue active:scale-90 transition-transform"
-                            >
-                                <IconPlus size={22} />
-                            </button>
+                            <div className="flex gap-2">
+                                <button onClick={() => setIsSettingsOpen(true)} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-ios-blue active:scale-90 transition-transform"><IconMenu size={20} /></button>
+                                <button onClick={() => setIsInputOpen(true)} className="w-9 h-9 rounded-full bg-ios-blue text-white flex items-center justify-center shadow-md active:scale-90 transition-transform"><IconPlus size={22} /></button>
+                            </div>
                         </div>
-                        
                         {/* Tabs */}
                         <div className="px-4 pb-0 overflow-x-auto no-scrollbar max-w-2xl mx-auto">
-                            <div className="flex gap-4 pb-3">
-                                {categories.map(cat => {
-                                    const isActive = activeTab === cat;
-                                    const stat = tabStats[cat] || {total:0, unused:0};
-                                    return (
-                                        <button 
-                                            key={cat}
-                                            onClick={() => setActiveTab(cat)}
-                                            className={`relative pb-2 text-sm font-medium transition-colors whitespace-nowrap ${isActive ? 'text-ios-blue' : 'text-ios-gray'}`}
-                                        >
-                                            {cat} 
-                                            <span className="ml-1.5 text-xs opacity-80 font-normal bg-black/5 px-1.5 py-0.5 rounded-md">
-                                                {stat.unused}
-                                            </span>
-                                            {isActive && (
-                                                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-ios-blue rounded-full layout-id-indicator" />
-                                            )}
-                                        </button>
-                                    )
-                                })}
+                            <div className="flex gap-5 pb-3">
+                                {categories.map(cat => (
+                                    <TabButton 
+                                        key={cat} 
+                                        name={cat} 
+                                        isActive={activeTab === cat} 
+                                        stat={tabStats[cat] || {total:0, unused:0}} 
+                                        onClick={setActiveTab} 
+                                        onRename={handleRenameCategory}
+                                    />
+                                ))}
                             </div>
                         </div>
                     </header>
 
-                    {/* 2. Main List Area */}
-                    <main className="pt-[calc(env(safe-area-inset-top)+7rem)] pb-32 px-4 max-w-2xl mx-auto min-h-screen">
-                        
-                        {/* Empty State */}
+                    {/* Main Content */}
+                    <main className="pt-[calc(env(safe-area-inset-top)+7.5rem)] pb-28 px-4 max-w-2xl mx-auto min-h-screen">
                         {sortedCodes.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 opacity-60">
-                                <div className="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mb-6">
-                                    <IconInbox size={36} className="text-slate-400" />
-                                </div>
-                                <h3 className="text-lg font-semibold text-slate-700">No Codes Here</h3>
-                                <p className="text-sm text-slate-500 mt-2 text-center max-w-[200px]">
-                                    Tap the + button to import codes into {activeTab}.
-                                </p>
+                            <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                                <IconInbox size={48} className="text-slate-300 mb-4" />
+                                <h3 className="text-lg font-semibold text-slate-700">No Codes</h3>
+                                <p className="text-sm text-slate-400">Tap + to add codes to {activeTab}</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
                                 {visibleItems.map((code) => (
-                                    <div 
-                                        key={code.id}
-                                        onClick={() => handleCopy(code)}
-                                        className={`group relative bg-white rounded-2xl p-4 shadow-ios border border-black/5 active:scale-[0.98] transition-all duration-150 cursor-pointer overflow-hidden ${code.isUsed ? 'opacity-60 bg-slate-50' : ''}`}
-                                    >
-                                        <div className="flex justify-between items-center gap-4">
-                                            {/* Code Text */}
+                                    <div key={code.id} onClick={() => handleCopy(code)} className={`group relative bg-white rounded-2xl p-4 shadow-ios border border-black/5 active:scale-[0.98] transition-all duration-150 cursor-pointer ${code.isUsed ? 'bg-slate-50 opacity-60' : ''}`}>
+                                        <div className="flex justify-between items-center gap-3">
                                             <div className="flex-1 min-w-0">
-                                                <div className={`font-mono text-[15px] sm:text-base break-all leading-tight ${code.isUsed ? 'line-through text-slate-400' : 'text-slate-800 font-medium'}`}>
-                                                    {code.value}
-                                                </div>
-                                                <div className="text-[10px] text-slate-400 mt-1.5 font-medium flex items-center gap-1">
-                                                    {code.isUsed ? 'USED' : 'AVAILABLE'} • {new Date(code.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                                </div>
+                                                <div className={`font-mono text-[15px] break-all leading-tight ${code.isUsed ? 'line-through text-slate-400' : 'text-slate-800 font-medium'}`}>{code.value}</div>
+                                                <div className="text-[10px] text-slate-400 mt-1.5 font-semibold tracking-wide uppercase">{code.isUsed ? 'Used' : 'Available'}</div>
                                             </div>
-
-                                            {/* Check Circle */}
-                                            <div 
-                                                onClick={(e) => { e.stopPropagation(); toggleCode(code.id); }}
-                                                className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                                                    code.isUsed ? 'bg-ios-green/10 text-ios-green' : 'bg-slate-100 text-slate-300 hover:text-ios-blue'
-                                                }`}
-                                            >
+                                            <div onClick={(e) => { e.stopPropagation(); toggleCode(code.id); }} className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${code.isUsed ? 'bg-ios-green/10 text-ios-green' : 'bg-slate-100 text-slate-300 hover:text-ios-blue'}`}>
                                                 {code.isUsed ? <IconCheck size={20} /> : <div className="w-5 h-5 rounded-full border-2 border-current" />}
                                             </div>
                                         </div>
                                     </div>
                                 ))}
-
-                                {/* Infinite Scroll Loading Trigger */}
-                                <div ref={loaderRef} className="h-10 flex items-center justify-center w-full">
-                                    {hasMore && <div className="w-5 h-5 border-2 border-ios-blue/30 border-t-ios-blue rounded-full animate-spin"></div>}
+                                <div ref={loaderRef} className="h-12 flex items-center justify-center w-full opacity-50">
+                                    {hasMore && <div className="w-5 h-5 border-2 border-ios-blue border-t-transparent rounded-full animate-spin" />}
                                 </div>
                             </div>
                         )}
                     </main>
 
-                    {/* 3. Bottom Action Bar (Glass) */}
+                    {/* Footer */}
                     <div className="fixed bottom-0 inset-x-0 z-40 glass border-t border-black/5 pb-[env(safe-area-inset-bottom)]">
-                        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-                            <button 
-                                onClick={clearUsed}
-                                disabled={tabStats[activeTab]?.unused === tabStats[activeTab]?.total}
-                                className="flex-1 h-10 flex items-center justify-center gap-2 bg-white border border-slate-200 rounded-xl text-ios-blue font-semibold text-sm shadow-sm active:bg-slate-50 transition-colors disabled:opacity-50 disabled:active:bg-white"
-                            >
-                                <span className="w-2 h-2 rounded-full bg-ios-blue"></span>
-                                Clear Used
-                            </button>
-                            
-                            <button 
-                                onClick={resetAll}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl text-ios-gray hover:bg-slate-100 active:text-ios-red transition-colors"
-                            >
-                                <IconTrash size={20} />
-                            </button>
+                        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-center">
+                            <button onClick={clearUsedInTab} disabled={tabStats[activeTab]?.unused === tabStats[activeTab]?.total} className="w-full h-11 flex items-center justify-center gap-2 bg-white border border-slate-200 rounded-xl text-ios-blue font-semibold text-sm shadow-sm active:bg-slate-50 transition-colors disabled:opacity-50 disabled:active:bg-white">Clear Used in {activeTab}</button>
                         </div>
                     </div>
 
-                    {/* Overlays */}
                     <Toast message={toast.msg} isVisible={toast.show} onClose={() => setToast({ ...toast, show: false })} />
-                    <InputArea 
-                        isOpen={isInputOpen} 
-                        onClose={() => setIsInputOpen(false)} 
-                        onImport={handleImport}
-                        categories={categories}
-                        activeCategory={activeTab}
-                    />
+                    <InputModal isOpen={isInputOpen} onClose={() => setIsInputOpen(false)} onImport={handleImport} categories={categories} activeCategory={activeTab} />
+                    <SettingsMenu isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} onReset={resetAll} onBackup={backupData} />
                 </div>
             );
         };
