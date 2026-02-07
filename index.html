@@ -4,8 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>CodeVault 码管家</title>
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3067/3067451.png">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3067/3067451.png">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -92,13 +95,4 @@
                             onChange={e => setInputText(e.target.value)}
                             placeholder="粘贴内容..."
                         />
-                        <button onClick={handleImport} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">导入到 {activeTab}</button>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="flex-1 flex bg-gray-200 p-1 rounded-xl no-scrollbar overflow-x-auto">
-                            {categories.map(cat => (
-                                <button 
-                                    key={cat}
-                                    onClick={() => setActiveTab(cat)}
-                                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold whitespace-nowrap ${activeTab === cat
+                        <button
